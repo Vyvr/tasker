@@ -7,3 +7,5 @@ psycopg[binary]
 pydantic
 pydantic-settings
 python-dotenv
+passlib[bcrypt]
+bcrypt==4.0.1
