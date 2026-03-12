@@ -21,3 +21,10 @@ class UserResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+
+class UserLoginRequest(BaseModel):
+  email: EmailStr
+  password: str = Field(min_length=8, max_length=255)
+  
+class LoginResponse(BaseModel):
+  message: str
