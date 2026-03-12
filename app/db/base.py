@@ -1,7 +1,9 @@
 from sqlalchemy.orm import DeclarativeBase
 
+
 class Base(DeclarativeBase):
-  pass
+    pass
+
 
 from app.models.user import *
 from app.models.team import *
