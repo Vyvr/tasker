@@ -11,6 +11,11 @@ class UserCreate(BaseModel):
     password: str = Field(min_length=8, max_length=255)
 
 
+class UserDelete(BaseModel):
+    id: UUID
+    message: str
+
+
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -18,13 +23,19 @@ class UserResponse(BaseModel):
     name: str
     surname: str
     email: EmailStr
-    is_active: bool
+    is_online: bool
     created_at: datetime
     updated_at: datetime
 
+
 class UserLoginRequest(BaseModel):
-  email: EmailStr
-  password: str = Field(min_length=8, max_length=255)
-  
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=255)
+
+
 class LoginResponse(BaseModel):
-  message: str
+    message: str
+
+
+class RefreshResponse(BaseModel):
+    message: str
