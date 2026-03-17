@@ -8,6 +8,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.team_members import TeamMember
+    from app.models.team import Team
 
 
 class User(Base):
@@ -38,4 +39,7 @@ class User(Base):
 
     team_links: Mapped[list["TeamMember"]] = relationship(
         "TeamMember", back_populates="user", cascade="all, delete-orphan"
+    )
+    owned_teams: Mapped[list["Team"]] = relationship(
+        "Team", back_populates="owner", cascade="all, delete-orphan"
     )
