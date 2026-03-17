@@ -9,7 +9,6 @@ from app.api.deps import (
     authenticate,
     get_db,
     validate_csrf,
-    validate_csrf_for_refresh,
 )
 from app.core.auth import (
     create_access_token,
