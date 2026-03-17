@@ -307,7 +307,7 @@ def delete_user_route(
         return user_for_deletion
     except ValueError as error:
         raise HTTPException(
-            status_code=status.HTTP_404_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=str(error),
         )
     except RuntimeError as error:
