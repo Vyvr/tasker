@@ -1,10 +1,15 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from uuid import UUID
 
-from app.api.deps import authenticate, get_db
+from app.api.deps import authenticate, get_db, validate_csrf
 from app.models.user import User
 from app.schemas.team import AddUserToTeamResponse, TeamResponse
-from app.services.team_service import create_team, get_teams_for_user_id
+from app.services.team_service import (
+    add_user_to_team,
+    create_team,
+    get_teams_for_user_id,
+)
 
 router = APIRouter(prefix="/teams", tags=["Teams"])
 
@@ -18,20 +23,39 @@ def get_user_teams_route(
     return team_list
 
 
-@router.post("/create", response_model=TeamResponse, status_code=status.HTTP_201_CREATED,)
+@router.post(
+    "/create",
+    response_model=TeamResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 def create_team_route(
     team_name: str,
     current_user: User = Depends(authenticate),
     db: Session = Depends(get_db),
+    _: None = Depends(validate_csrf),
 ) -> TeamResponse:
     new_team = create_team(db, current_user.id, team_name)
     return new_team
 
-@router.post("/add-user", response_model=AddUserToTeamResponse, status_code=status.HTTP_201_CREATED,)
+
+@router.post(
+    "/add-user",
+    response_model=AddUserToTeamResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 def add_user_to_team_route(
-  team_id: str,
-  user_id: str,
-  current_user: User = Depends(authenticate),
-  db: Session = Depends(get_db)
+    team_id: UUID,
+    user_id: UUID,
+    current_user: User = Depends(authenticate),
+    db: Session = Depends(get_db),
+    _: None = Depends(validate_csrf),
 ) -> AddUserToTeamResponse:
-  new_member = add_user_to_team(db, current_user.id, user_id, team_id)
+    try:
+        new_member = add_user_to_team(db, current_user.id, user_id, team_id)
+        return new_member
+    except ValueError as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error))
+    except RuntimeError as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error)
+        )

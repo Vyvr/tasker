@@ -125,7 +125,6 @@ def login_user_route(
 def refresh_token_route(
     request: Request,
     response: Response,
-    _: None = Depends(validate_csrf),
 ) -> RefreshResponse:
     refresh_token = request.cookies.get("refresh_token")
     if not refresh_token:
