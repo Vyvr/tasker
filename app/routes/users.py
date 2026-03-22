@@ -126,7 +126,6 @@ def refresh_token_route(
     request: Request,
     response: Response,
     _: None = Depends(validate_csrf),
-    __: None = Depends(authenticate),
 ) -> RefreshResponse:
     refresh_token = request.cookies.get("refresh_token")
     if not refresh_token:
@@ -155,7 +154,7 @@ def refresh_token_route(
         new_refresh_token = create_refresh_token(UUID(user_id))
 
         new_csrf_token = create_csrf_token()
-        new_csrf_signature = sign_csrf_token(new_csrf_token, new_refresh_token)
+        new_csrf_signature = sign_csrf_token(new_csrf_token)
 
         secure_cookie = ENVIRONMENT != "dev"
 
