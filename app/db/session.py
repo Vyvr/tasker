@@ -1,14 +1,11 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.core.config import DATABASE_URL, ENVIRONMENT
+from app.core.config import DATABASE_URL
 
-
-engine = create_engine(DATABASE_URL)
-
-if ENVIRONMENT == "dev":
-    engine.echo = True
-else:
-    engine.echo = False
+engine = create_engine(
+    DATABASE_URL,
+    echo=True,  # SQLAlchemy loguje do "sqlalchemy.engine" → database.log
+)
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
