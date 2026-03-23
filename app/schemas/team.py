@@ -12,6 +12,7 @@ class TeamResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-class AddUserToTeamResponse(BaseModel):
-  user_id: str
-  team_id: str
+
+class TeamMemberResponse(BaseModel):
+    user_id: UUID
+    team_id: UUID

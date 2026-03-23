@@ -277,7 +277,11 @@ def get_user_by_email_route(
     return user
 
 
-@router.get("/find_by/id/{user_id}", response_model=UserResponse)
+@router.get(
+    "/find_by/id/{user_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=UserResponse,
+)
 def get_user_by_id_route(
     user_id: UUID,
     db: Session = Depends(get_db),

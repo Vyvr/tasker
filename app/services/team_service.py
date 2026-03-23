@@ -1,3 +1,4 @@
+from enum import Enum, auto
 from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -5,7 +6,49 @@ from sqlalchemy.orm import Session
 from app.models.team import Team
 from app.models.team_members import TeamMember
 from app.models.user import User
-from app.schemas.team import AddUserToTeamResponse, TeamResponse
+from app.schemas.team import TeamMemberResponse, TeamResponse
+
+
+class _Operation(Enum):
+    ADD = auto()
+    DELETE = auto()
+
+
+def _before_add_delete_member(
+    owner_id: UUID,
+    team_id: UUID,
+    user_id: UUID,
+    db: Session,
+    mode: _Operation,
+) -> None:
+    existing_team = db.execute(
+        select(Team).where(Team.id == team_id)
+    ).scalar_one_or_none()
+
+    if not existing_team:
+        raise ValueError("No team with provided id.")
+
+    if existing_team.owner_id != owner_id:
+        raise ValueError("User is not allowed to add new members to the team.")
+
+    existing_user = db.execute(
+        select(User).where(User.id == user_id)
+    ).scalar_one_or_none()
+
+    if not existing_user:
+        raise ValueError("No user with provided id.")
+
+    is_a_member = db.execute(
+        select(TeamMember).where(
+            TeamMember.user_id == user_id, TeamMember.team_id == team_id
+        )
+    ).scalar_one_or_none()
+
+    if is_a_member and mode == _Operation.ADD:
+        raise ValueError("User is already member of the team.")
+
+    if not is_a_member and mode == _Operation.DELETE:
+        raise ValueError("User is not a member of the team.")
 
 
 def get_teams_for_user_id(db: Session, user_id: UUID) -> list[TeamResponse]:
@@ -41,39 +84,37 @@ def add_user_to_team(
     owner_id: UUID,
     user_id: UUID,
     team_id: UUID,
-) -> AddUserToTeamResponse:
-    existing_team = db.execute(
-        select(Team).where(Team.id == team_id)
-    ).scalar_one_or_none()
-
-    if not existing_team:
-        raise ValueError("No team with provided id.")
-
-    if existing_team.owner_id != owner_id:
-        raise ValueError("User is not allowed to add new members to the team.")
-
-    existing_user = db.execute(
-        select(User).where(User.id == user_id)
-    ).scalar_one_or_none()
-
-    if not existing_user:
-        raise ValueError("No user with provided id.")
-
-    is_a_member = db.execute(
-        select(TeamMember).where(
-            TeamMember.user_id == user_id, TeamMember.team_id == team_id
-        )
-    ).scalar_one_or_none()
-
-    if is_a_member:
-        raise ValueError("User is already member of the team.")
+) -> TeamMemberResponse:
+    _before_add_delete_member(owner_id, team_id, user_id, db, _Operation.ADD)
 
     new_member = TeamMember(user_id=user_id, team_id=team_id)
     try:
         db.add(new_member)
         db.commit()
         db.refresh(new_member)
-        return AddUserToTeamResponse(user_id=str(user_id), team_id=str(team_id))
+        return TeamMemberResponse(user_id=user_id, team_id=team_id)
     except Exception as e:
         db.rollback()
         raise RuntimeError("Can't add new user. Try again later") from e
+
+
+def delete_user_from_team(
+    db: Session,
+    owner_id: UUID,
+    user_id: UUID,
+    team_id: UUID,
+) -> TeamMemberResponse:
+    _before_add_delete_member(owner_id, team_id, user_id, db, _Operation.DELETE)
+
+    member_to_delete = db.execute(
+        select(TeamMember).where(
+            TeamMember.user_id == user_id, TeamMember.team_id == team_id
+        )
+    ).scalar_one()
+    try:
+        db.delete(member_to_delete)
+        db.commit()
+        return TeamMemberResponse(user_id=user_id, team_id=team_id)
+    except Exception as e:
+        db.rollback()
+        raise RuntimeError("Can't remove user from the team. Try again later.") from e
