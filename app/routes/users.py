@@ -243,7 +243,7 @@ def logout_user_route(
         httponly=True,
         secure=secure_cookie,
         samesite="lax",
-        path="/users/refresh",
+        path="/",
     )
 
     current_user.is_online = False
