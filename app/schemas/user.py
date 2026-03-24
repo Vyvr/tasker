@@ -27,6 +27,13 @@ class UserResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+class MinimalUserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: UUID
+    name: str
+    surname: str
+    email: EmailStr
 
 class UserLoginRequest(BaseModel):
     email: EmailStr

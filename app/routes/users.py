@@ -21,6 +21,7 @@ from app.core.config import ENVIRONMENT
 from app.models.user import User
 from app.schemas.user import (
     LoginResponse,
+    MinimalUserResponse,
     RefreshResponse,
     UserCreate,
     UserDelete,
@@ -31,6 +32,7 @@ from app.services.user_service import (
     authenticate_user,
     create_user,
     delete_user,
+    edit_user,
     get_user_by_email,
     get_user_by_id,
 )
@@ -307,6 +309,35 @@ def delete_user_route(
     try:
         user_for_deletion = delete_user(db, user_id)
         return user_for_deletion
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(error),
+        )
+    except RuntimeError as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(error),
+        )
+
+
+@router.put(
+    "/{user_id}",
+    response_model=MinimalUserResponse,
+    status_code=status.HTTP_200_OK,
+)
+def edit_user_route(
+    user_id: UUID,
+    name: str | None = None,
+    surname: str | None = None,
+    email: str | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(authenticate),
+    _: None = Depends(validate_csrf),
+) -> MinimalUserResponse:
+    try:
+        edited_user = edit_user(user_id, name, surname, email, current_user.id, db)
+        return edited_user
     except ValueError as error:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

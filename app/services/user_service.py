@@ -61,7 +61,45 @@ def delete_user(db: Session, user_id: UUID) -> UserDelete:
         raise RuntimeError("Database error. User not deleted.") from e
 
 
-def authenticate_user(db: Session, email: str, password: str) -> User | None:
+def edit_user(
+    user_id: UUID,
+    new_name: str | None,
+    new_surname: str | None,
+    new_email: str | None,
+    current_user_id: UUID,
+    db: Session,
+) -> User:
+    if user_id != current_user_id:
+        raise ValueError("You can't edit other users except yourself.")
+
+    user_to_edit = get_user_by_id(db, user_id)
+
+    if not user_to_edit:
+        raise ValueError("User with provided id doesn't exist.")
+
+    updates = {
+        "name": new_name,
+        "surname": new_surname,
+        "email": new_email,
+    }
+    for field, value in updates.items():
+        if value is not None:
+            setattr(user_to_edit, field, value)
+
+    try:
+        db.commit()
+        db.refresh(user_to_edit)
+        return user_to_edit
+    except Exception as e:
+        db.rollback()
+        raise RuntimeError("Database error. User not updated.") from e
+
+
+def authenticate_user(
+    db: Session,
+    email: str,
+    password: str,
+) -> User | None:
     user = get_user_by_email(db, email.lower())
 
     if not user:
