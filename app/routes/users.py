@@ -191,7 +191,7 @@ def refresh_token_route(
             secure=secure_cookie,
             samesite="lax",
             max_age=60 * 60 * 24 * 7,
-            path="/users/refresh",
+            path="/",
         )
 
         return RefreshResponse(message="Token refreshed")
