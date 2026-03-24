@@ -37,6 +37,10 @@ from app.services.user_service import (
     get_user_by_id,
 )
 
+#
+# @TODO: Add change password route
+#
+
 router = APIRouter(prefix="/users", tags=["Users"])
 
 

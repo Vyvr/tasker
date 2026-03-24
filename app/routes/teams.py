@@ -13,7 +13,7 @@ from app.services.team_service import (
 )
 
 #
-# @TODO: add PUT and DELETE methods
+# @TODO: add PUT and DELETE routes
 #
 
 router = APIRouter(prefix="/teams", tags=["Teams"])
