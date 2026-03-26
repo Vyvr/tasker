@@ -1,11 +1,12 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
-from sqlalchemy import DateTime, ForeignKey, String, func
+from sqlalchemy import DateTime, ForeignKey, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from uuid import UUID, uuid4
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.models.project import Project
     from app.models.team import Team
     from app.models.user import User
     from app.models.task_status import TaskStatus
@@ -28,12 +29,17 @@ class Task(Base):
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     project_id: Mapped[UUID] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    team_id: Mapped[UUID] = mapped_column(
         ForeignKey("teams.id", ondelete="CASCADE"),
         nullable=False,
     )
-    status: Mapped[UUID | None] = mapped_column(
+    status_id: Mapped[UUID] = mapped_column(
         ForeignKey("task_statuses.id", ondelete="SET NULL"),
-        nullable=True,
+        nullable=False,
+        server_default=text("'00000000-0000-0000-0000-000000000001'"),
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -57,8 +63,14 @@ class Task(Base):
         back_populates="assigned_tasks",
         foreign_keys=[assignee_id],
     )
-    assigned_project: Mapped["Team"] = relationship(
-        "Team",
-        back_populates="assigned_tasks",
+    project: Mapped["Project"] = relationship(
+        "Project",
+        back_populates="tasks",
     )
-    assigned_status: Mapped["TaskStatus"] = relationship("TaskStatus", viewonly=True)
+    team: Mapped["Team"] = relationship(
+        "Team",
+        back_populates="tasks",
+    )
+    assigned_status: Mapped["TaskStatus"] = relationship(
+        "TaskStatus", foreign_keys=[status_id], viewonly=True
+    )
