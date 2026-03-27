@@ -28,7 +28,7 @@ def _assert_user_in_project(db: Session, user_id: UUID, project_id: UUID) -> Non
             ProjectTeam.project_id == project_id,
             TeamMember.user_id == user_id,
         )
-    ).scalar_one_or_none()
+    ).first()
 
     if not is_member:
         raise ValueError("User is not a member of this project.")
@@ -117,7 +117,6 @@ def edit_project(
     db: Session, user_id: UUID, project_id: UUID, data: ProjectUpdate
 ) -> Project:
     project = _get_project_or_raise(db, project_id)
-    _assert_user_in_project(db, user_id, project_id)
 
     if project.owner_id != user_id:
         raise ValueError("Only the project owner can edit this project.")
@@ -138,7 +137,6 @@ def edit_project(
 
 def delete_project(db: Session, user_id: UUID, project_id: UUID) -> Project:
     project = _get_project_or_raise(db, project_id)
-    _assert_user_in_project(db, user_id, project_id)
 
     if project.owner_id != user_id:
         raise ValueError("Only the project owner can delete this project.")

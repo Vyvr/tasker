@@ -5,12 +5,16 @@ from uuid import UUID
 from app.api.deps import authenticate, get_db, validate_csrf
 from app.models.user import User
 from app.schemas.task import TaskCreate, TaskResponse, TaskUpdate
+from app.schemas.task_status import TaskStatusResponse
 from app.services.task_service import (
     create_task,
     delete_task,
     edit_task,
     get_task_by_id,
+    get_task_status,
     get_tasks_for_project,
+    get_tasks_for_team,
+    get_tasks_for_user,
 )
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
@@ -19,12 +23,37 @@ router = APIRouter(prefix="/tasks", tags=["Tasks"])
 @router.get("/project/{project_id}", response_model=list[TaskResponse])
 def get_project_tasks_route(
     project_id: UUID,
+    current_user: User = Depends(authenticate),
+    db: Session = Depends(get_db),
+) -> list[TaskResponse]:
+    try:
+        tasks = get_tasks_for_project(db, current_user.id, project_id)
+        return tasks
+    except ValueError as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error))
+
+
+@router.get("/team/{team_id}", response_model=list[TaskResponse])
+def get_team_tasks_route(
     team_id: UUID,
     current_user: User = Depends(authenticate),
     db: Session = Depends(get_db),
 ) -> list[TaskResponse]:
     try:
-        tasks = get_tasks_for_project(db, current_user.id, project_id, team_id)
+        tasks = get_tasks_for_team(db, current_user.id, team_id)
+        return tasks
+    except ValueError as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error))
+
+
+@router.get("/user/{user_id}", response_model=list[TaskResponse])
+def get_user_tasks_route(
+    user_id: UUID,
+    current_user: User = Depends(authenticate),
+    db: Session = Depends(get_db),
+) -> list[TaskResponse]:
+    try:
+        tasks = get_tasks_for_user(db, current_user.id, user_id)
         return tasks
     except ValueError as error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error))
@@ -39,6 +68,18 @@ def get_task_route(
     try:
         task = get_task_by_id(db, current_user.id, task_id)
         return task
+    except ValueError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error))
+
+
+@router.get("/{task_id}/status", response_model=TaskStatusResponse)
+def get_task_status_route(
+    task_id: UUID,
+    current_user: User = Depends(authenticate),
+    db: Session = Depends(get_db),
+) -> TaskStatusResponse:
+    try:
+        return get_task_status(db, current_user.id, task_id)
     except ValueError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error))
 

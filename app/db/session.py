@@ -5,7 +5,7 @@ from app.core.config import DATABASE_URL
 
 engine = create_engine(
     DATABASE_URL,
-    echo=True,  # SQLAlchemy loguje do "sqlalchemy.engine" → database.log
+    echo=True,
 )
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)

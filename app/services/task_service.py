@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.models.project import Project
 from app.models.project_team import ProjectTeam
 from app.models.task import Task
+from app.models.task_status import TaskStatus
 from app.models.team_members import TeamMember
 from app.schemas.task import TaskCreate, TaskUpdate
 
@@ -31,6 +32,20 @@ def _assert_user_in_team(db: Session, user_id: UUID, team_id: UUID) -> None:
         raise ValueError("User is not a member of this team.")
 
 
+def _assert_user_in_project(db: Session, user_id: UUID, project_id: UUID) -> None:
+    is_member = db.execute(
+        select(ProjectTeam)
+        .join(TeamMember, ProjectTeam.team_id == TeamMember.team_id)
+        .where(
+            ProjectTeam.project_id == project_id,
+            TeamMember.user_id == user_id,
+        )
+    ).first()
+
+    if not is_member:
+        raise ValueError("User is not a member of this project.")
+
+
 def _assert_team_in_project(db: Session, team_id: UUID, project_id: UUID) -> None:
     link = db.execute(
         select(ProjectTeam).where(
@@ -43,15 +58,39 @@ def _assert_team_in_project(db: Session, team_id: UUID, project_id: UUID) -> Non
         raise ValueError("Team is not assigned to this project.")
 
 
-def get_tasks_for_project(
-    db: Session, user_id: UUID, project_id: UUID, team_id: UUID
-) -> list[Task]:
-    _assert_user_in_team(db, user_id, team_id)
-    _assert_team_in_project(db, team_id, project_id)
+def get_tasks_for_project(db: Session, user_id: UUID, project_id: UUID) -> list[Task]:
+    _assert_user_in_project(db, user_id, project_id)
 
-    result = db.execute(
-        select(Task).where(Task.project_id == project_id, Task.team_id == team_id)
-    )
+    result = db.execute(select(Task).where(Task.project_id == project_id))
+    return result.scalars().all()
+
+
+def get_tasks_for_team(db: Session, user_id: UUID, team_id: UUID) -> list[Task]:
+    _assert_user_in_team(db, user_id, team_id)
+
+    result = db.execute(select(Task).where(Task.team_id == team_id))
+    return result.scalars().all()
+
+
+def get_tasks_for_user(db: Session, user_id: UUID, target_user_id: UUID) -> list[Task]:
+
+    if user_id != target_user_id:
+        shared_team = db.execute(
+            select(TeamMember)
+            .where(TeamMember.user_id == user_id)
+            .where(
+                TeamMember.team_id.in_(
+                    select(TeamMember.team_id).where(
+                        TeamMember.user_id == target_user_id
+                    )
+                )
+            )
+        ).first()
+
+        if not shared_team:
+            raise ValueError("You don't have access to this user's tasks.")
+
+    result = db.execute(select(Task).where(Task.assignee_id == target_user_id))
     return result.scalars().all()
 
 
@@ -59,6 +98,20 @@ def get_task_by_id(db: Session, user_id: UUID, task_id: UUID) -> Task:
     task = _get_task_or_raise(db, task_id)
     _assert_user_in_team(db, user_id, task.team_id)
     return task
+
+
+def get_task_status(db: Session, user_id: UUID, task_id: UUID) -> TaskStatus:
+    task = _get_task_or_raise(db, task_id)
+    _assert_user_in_team(db, user_id, task.team_id)
+
+    status = db.execute(
+        select(TaskStatus).where(TaskStatus.id == task.status_id)
+    ).scalar_one_or_none()
+
+    if not status:
+        raise ValueError("Status not found.")
+
+    return status
 
 
 def create_task(db: Session, creator_id: UUID, data: TaskCreate) -> Task:
@@ -123,7 +176,7 @@ def delete_task(db: Session, user_id: UUID, task_id: UUID) -> Task:
             ProjectTeam.project_id == task.project_id,
             TeamMember.user_id == user_id,
         )
-    ).scalar_one_or_none()
+    ).first()
 
     if not is_member:
         raise ValueError("Only a team member of this project can delete tasks.")
